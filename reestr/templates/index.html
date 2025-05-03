@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+
+{% block title %}Главная{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">📊 Панель управления</h1>
+<p>Выберите нужный раздел:</p>
+<ul class="list-group">
+    <li class="list-group-item">
+        <a href="{% url 'reestr_list' %}">📁 Реестр договоров</a>
+    </li>
+    <!-- другие вкладки здесь -->
+</ul>
+{% endblock %}

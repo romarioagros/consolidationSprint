@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.sqlite3
+*.log
+
+# VS Code
+.vscode/
+
+# Env
+.env
+*.env
+venv/
+ENV/
+env.bak/
+*.bak
+
+# Django
+db.sqlite3
+staticfiles/
+media/
+
+# PostgreSQL dumps
+*.sql
+*.dump
+
+# System
+.DS_Store
+Thumbs.db
+
+
+# Django settings
+settings.py

@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+
+{% block title %}Реестр договоров{% endblock %}
+
+{% block content %}
+<h2>📁 Реестр договоров</h2>
+<div class="mb-3">
+    <a href="{% url 'reestr_export' %}" class="btn btn-success">📥 Экспорт в Excel</a>
+    <a href="{% url 'reestr_add' %}" class="btn btn-primary">➕ Добавить</a>
+</div>
+<table id="reestr-table" class="table table-bordered table-striped table-sm">
+    <thead class="table-light">
+        <tr>
+            <th>ID</th>
+            <th>Service ID</th>
+            <th>Revenue Type</th>
+            <th>Contractor</th>
+            <th>Contract Number</th>
+            <th>Sign Date</th>
+            <th>Subject</th>
+            <th>Code</th>
+            <th>Type</th>
+            <th>Status</th>
+        </tr>
+        <tr>
+            {% for _ in reestr.0 %}
+                <th><input type="text" placeholder="Фильтр" class="form-control form-control-sm" /></th>
+            {% endfor %}
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in reestr %}
+        <tr>
+            <td>{{ row.id }}</td>
+            <td>{{ row.service_id }}</td>
+            <td>{{ row.revenue_type }}</td>
+            <td>{{ row.contractor }}</td>
+            <td>{{ row.contract_number }}</td>
+            <td>{{ row.sign_date }}</td>
+            <td>{{ row.subject }}</td>
+            <td>{{ row.code }}</td>
+            <td>{{ row.type }}</td>
+            <td>{{ row.status }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
+
+
+
+{% block scripts %}
+<script>
+$(document).ready(function () {
+    let table = $('#reestr-table').DataTable({
+        orderCellsTop: true,
+        fixedHeader: true,
+        language: {
+            search: "Поиск:",
+            lengthMenu: "Показать _MENU_ записей",
+            zeroRecords: "Ничего не найдено",
+            info: "Показано _START_–_END_ из _TOTAL_",
+            paginate: {
+                previous: "←",
+                next: "→"
+            }
+        }
+    });
+
+    $('#reestr-table thead tr:eq(1) th input').on('keyup change', function () {
+        let colIndex = $(this).parent().index();
+        table.column(colIndex).search(this.value).draw();
+    });
+});
+</script>
+{% endblock %}

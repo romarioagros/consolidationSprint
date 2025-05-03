@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+
+{% block title %}Добавить договор{% endblock %}
+
+{% block content %}
+<h2>➕ Добавить договор</h2>
+<form method="post" class="row g-3">
+    {% csrf_token %}
+    <div class="col-md-3"><input name="service_id" type="number" class="form-control" placeholder="Service ID" required></div>
+    <div class="col-md-3"><input name="revenue_type" type="text" class="form-control" placeholder="Revenue Type" required></div>
+    <div class="col-md-3"><input name="contractor" type="text" class="form-control" placeholder="Contractor" required></div>
+    <div class="col-md-3"><input name="contract_number" type="text" class="form-control" placeholder="Contract Number" required></div>
+    <div class="col-md-3"><input name="sign_date" type="date" class="form-control" required></div>
+    <div class="col-md-3"><input name="subject" type="text" class="form-control" placeholder="Subject" required></div>
+    <div class="col-md-3"><input name="code" type="text" class="form-control" placeholder="Code" required></div>
+    <div class="col-md-3"><input name="type" type="text" class="form-control" placeholder="Type" required></div>
+    <div class="col-md-3"><input name="status" type="text" class="form-control" placeholder="Status" required></div>
+    <div class="col-12">
+        <button type="submit" class="btn btn-primary">Сохранить</button>
+        <a href="{% url 'reestr_list' %}" class="btn btn-secondary">← Назад</a>
+    </div>
+</form>
+{% endblock %}
