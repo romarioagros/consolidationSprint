@@ -17,9 +17,13 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path ,include
 from reestr.views import index
+from reestr.views import reports_periods
+from reestr.views import export_report_excel
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', index, name='index'),
+    path('reports/',reports_periods,name='reports_periods'),
+    path('reports/export/', export_report_excel, name='export_report_excel'),
      path('reestr/', include('reestr.urls'))
 ]
