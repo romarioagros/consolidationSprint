@@ -7,6 +7,14 @@ from django.db import connections
 from django.shortcuts import redirect
 from django.views.decorators.csrf import csrf_exempt  # временно, если нет CSRF token
 from django.utils import timezone
+import os
+from django.conf import settings
+
+
+def load_sql(file_name):
+    path = os.path.join(settings.BASE_DIR, 'reestr', 'sql', file_name)
+    with open(path, 'r', encoding='utf-8') as file:
+        return file.read()
 
 
 
@@ -162,30 +170,9 @@ def reports_periods(request):
         context['selected_month'] = selected_month
         context['selected_year'] = selected_year
         period_name = f"{selected_month}_{selected_year}"
-
+        query = load_sql('report_query.sql')
         with connections['pg_consolidation'].cursor() as cursor:
-            cursor.execute('''
-                WITH start_report AS (
-                    SELECT 
-                        period_name,
-                        name, amount, B.num_cg_direction, cost_with_vat,
-                        I.id_agr
-                    FROM sms.blinov_a2p B
-                    LEFT JOIN agrements.ids I ON B.num_cg_direction = I.num_cg_direction
-                    LEFT JOIN agrements.periods P ON B.start_date = P.period_start AND B.end_date = P.period_end
-                    WHERE period_name = %s
-                ),
-                ids_tab AS (
-                    SELECT id_agr, SUM(cost_with_vat) cost_vat, SUM(amount) ammount
-                    FROM start_report
-                    GROUP BY id_agr
-                )
-                SELECT A.id, A.service_id, A.revenue_type, A.contractor, A.contract_number,
-                       A.sign_date, A.subject, A.code, A.type, A.status,
-                       I.ammount, I.cost_vat
-                FROM agrements.reestr A
-                LEFT JOIN ids_tab I ON A.id = I.id_agr
-            ''', [period_name])
+            cursor.execute(query, {'period_name': period_name})
             rows = cursor.fetchall()
             columns = [col[0] for col in cursor.description]
             context['report_data'] = [dict(zip(columns, row)) for row in rows]
@@ -201,31 +188,11 @@ def export_report_excel(request):
 
     period_name = f"{month}_{year}"
 
+    query = load_sql('report_query.sql')
     with connections['pg_consolidation'].cursor() as cursor:
-        cursor.execute(f'''
-            with start_report as (
-                SELECT 
-                    period_name,
-                    name, amount, B.num_cg_direction, cost_with_vat,
-                    I.id_agr
-                FROM sms.blinov_a2p B
-                left join agrements.ids I on 
-                    b.num_cg_direction = I.num_cg_direction
-                left join agrements.periods P
-                    on B.start_date = P.period_start and B.end_date = P.period_end
-                where period_name = %s
-            ),
-            ids_tab as (
-                select id_agr , sum(cost_with_vat) cost_vat, sum(amount) ammount
-                from start_report
-                group by id_agr
-            )
-            select A.*, ammount, cost_vat
-            from agrements.reestr A
-            left join ids_tab I on A.id = I.id_agr
-        ''', [period_name])
-        columns = [col[0] for col in cursor.description]
-        rows = cursor.fetchall()
+            cursor.execute(query, {'period_name': period_name})
+            rows = cursor.fetchall()
+            columns = [col[0] for col in cursor.description]
 
     df = pd.DataFrame(rows, columns=columns)
     

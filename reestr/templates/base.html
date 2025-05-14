@@ -5,7 +5,7 @@
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>    
 <head>
-    <img src="{% static 'th.jpeg' %}" alt="Логотип" style="height: 60px;">
+  
 
     <meta charset="UTF-8">
     <title>{% block title %}Управление{% endblock %}</title>
@@ -21,7 +21,7 @@
         <div class="collapse navbar-collapse">
             <ul class="navbar-nav me-auto">
                 <li class="nav-item"><a class="nav-link" href="{% url 'reestr_list' %}">📁 Реестр договоров</a></li>
-                <!-- здесь добавим другие разделы -->
+                <li class="nav-item"><a class="nav-link" href="{% url 'reports_periods'%}">📁 Отчеты</a></li>
             </ul>
         </div>
     </div>
