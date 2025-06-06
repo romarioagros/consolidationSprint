@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path , include
 from . import views
 from .views import reestr_list
 from .views import add_reestr
@@ -11,4 +11,5 @@ urlpatterns = [
    path('reports/export/', export_report_excel, name='export_report_excel'),
     path('reports/', reports_periods, name='reports_periods'),
     path('add/', add_reestr, name='reestr_add'),  # ← новая страница
+    path('sms_blinoff/', include('sms_blinoff.urls')),  
 ]

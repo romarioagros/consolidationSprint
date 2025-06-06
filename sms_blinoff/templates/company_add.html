@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+
+{% block title %}Добавить компанию{% endblock %}
+
+{% block content %}
+<h2 class="mt-3 mb-4">➕ Добавить компанию</h2>
+
+{# === сообщения: ошибки/успех === #}
+{% if messages %}
+  <div class="container mb-4">
+    {% for msg in messages %}
+      <div class="alert alert-{{ msg.tags }}">{{ msg }}</div>
+    {% endfor %}
+  </div>
+{% endif %}
+
+<form method="post" class="row g-2 mb-4">
+  {% csrf_token %}
+
+  <!-- 1) Название (name) -->
+  <div class="col-md-4">
+    <label for="account_name" class="form-label">Название (name):</label>
+    <input type="text" name="account_name" id="account_name" class="form-control"
+           required value="{{ prev_account_name }}">
+  </div>
+
+  <!-- 2) Юридическое название (legal_name) -->
+  <div class="col-md-4">
+    <label for="legal_name" class="form-label">Юридическое название (legal_name):</label>
+    <input type="text" name="legal_name" id="legal_name" class="form-control"
+           required value="{{ prev_legal_name }}">
+  </div>
+
+  <!-- 3) Материнская компания (select из существующих) -->
+  <div class="col-md-4">
+    <label for="mother_id" class="form-label">Материнская компания:</label>
+    <div class="input-group">
+      <select name="mother_id" id="mother_id" class="form-select" required>
+        <option value="" disabled {% if not prev_mother_id %}selected{% endif %}>— выберите —</option>
+        {% for mother in mothers %}
+          <option value="{{ mother.id }}"
+                  {% if mother.id|stringformat:"s" == prev_mother_id|stringformat:"s" %}selected{% endif %}>
+            {{ mother.name }}
+          </option>
+        {% endfor %}
+      </select>
+      <a href="{% url 'sms_blinoff:add_mother' %}" class="btn btn-outline-secondary" title="Создать новую мат.компанию">
+        ➕
+      </a>
+    </div>
+    <div class="form-text">
+      Если нужной материнской компании нет в списке, нажмите «➕» и добавьте её.
+    </div>
+  </div>
+
+  <!-- Перенос на новую строку -->
+  <div class="col-12"></div>
+
+  <!-- 4) Алиасы (alians) – динамические поля -->
+  <div class="col-12">
+    <label class="form-label">Алиасы (alians):</label>
+    <div id="alians-container">
+      {% if prev_aliases %}
+        {% for alias in prev_aliases %}
+          <div class="input-group mb-2">
+            <input type="text" name="alians" class="form-control"
+                   placeholder="Введите alias" value="{{ alias }}">
+            <button type="button" class="btn btn-outline-danger btn-remove-alias">✖</button>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="input-group mb-2">
+          <input type="text" name="alians" class="form-control" placeholder="Введите alias">
+          <button type="button" class="btn btn-outline-danger btn-remove-alias">✖</button>
+        </div>
+      {% endif %}
+    </div>
+    <button id="add-alias-btn" type="button" class="btn btn-sm btn-outline-primary">
+      ➕ Добавить alias
+    </button>
+  </div>
+
+  <!-- 5) Кнопка «Сохранить компанию» -->
+  <div class="col-12 mt-4">
+    <button type="submit" class="btn btn-primary">💾 Сохранить компанию</button>
+  </div>
+</form>
+
+{# === Скрипт для динамики полей alias === #}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  const container = document.getElementById("alians-container");
+  const addBtn = document.getElementById("add-alias-btn");
+
+  function createAliasField(value = "") {
+    const wrapper = document.createElement("div");
+    wrapper.classList.add("input-group", "mb-2");
+
+    const input = document.createElement("input");
+    input.setAttribute("type", "text");
+    input.setAttribute("name", "alians");
+    input.setAttribute("placeholder", "Введите alias");
+    input.classList.add("form-control");
+    input.value = value;
+
+    const removeBtn = document.createElement("button");
+    removeBtn.setAttribute("type", "button");
+    removeBtn.classList.add("btn", "btn-outline-danger", "btn-remove-alias");
+    removeBtn.textContent = "✖";
+
+    removeBtn.addEventListener("click", function() {
+      wrapper.remove();
+    });
+
+    wrapper.appendChild(input);
+    wrapper.appendChild(removeBtn);
+    return wrapper;
+  }
+
+  // Навешиваем «удалить» на уже существующие prev_aliases
+  document.querySelectorAll(".btn-remove-alias").forEach(btn => {
+    btn.addEventListener("click", function() {
+      this.closest(".input-group").remove();
+    });
+  });
+
+  // Добавляем новую группу alias при клике на «➕ Добавить alias»
+  addBtn.addEventListener("click", function() {
+    container.appendChild(createAliasField());
+  });
+});
+</script>
+{% endblock %}
