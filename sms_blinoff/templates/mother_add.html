@@ -15,18 +15,19 @@
 
 <form method="post" class="row g-2 mb-4">
   {% csrf_token %}
+  <input type="hidden" name="next" value="{{ next }}">
 
   <div class="col-md-6">
     <label for="mother_name" class="form-label">Имя материнской компании:</label>
-    <input type="text" name="mother_name" id="mother_name" class="form-control"
-           required value="{{ prev_mother_name }}">
+    <input type="text" name="mother_name" id="mother_name"
+           class="form-control" required
+           value="{{ prev_mother_name }}">
   </div>
 
-  <!-- чуть ниже, на новой строке — кнопка Сохранить -->
   <div class="col-12 mt-3">
-    <button type="submit" class="btn btn-primary">💾 Сохранить материнскую компанию</button>
-    <a href="{% url 'sms_blinoff:add_account' %}" class="btn btn-secondary ms-2">
-      ← Назад к форме создания компании
+    <button type="submit" class="btn btn-primary">💾 Сохранить</button>
+    <a href="{% url 'sms_blinoff:'|add:next %}" class="btn btn-secondary ms-2">
+      ← Назад
     </a>
   </div>
 </form>

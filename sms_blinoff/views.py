@@ -119,6 +119,9 @@ def add_company(request):
 
 
 def add_mother(request):
+
+
+
     """
     Показывает форму для создания новой материнской компании (descr.mother).
     После успешного добавления – редирект на add_account.
@@ -149,3 +152,56 @@ def add_mother(request):
     return render(request, "mother_add.html", {
         "prev_mother_name": ""
     })    
+
+
+
+def mother_list(request):
+    """
+    Показывает все записи из descr.mother и кнопку «Добавить мат.компанию».
+    """
+    with connections['pgDataforSMS'].cursor() as cursor:
+        cursor.execute("SELECT id, name, creation_date FROM descr.mother ORDER BY  id ;")
+        cols = [c[0] for c in cursor.description]
+        rows = [dict(zip(cols, r)) for r in cursor.fetchall()]
+
+    return render(request, "mother_list.html", {
+        "mothers": rows,
+    })
+
+def add_mother(request):
+    """
+    Форма создания новой материнской компании.
+    Параметр GET/POST 'next' определяет, куда вернуть пользователя после сохранения.
+    """
+    # Откуда пришли. Значение - имя URL из этого же app_name.
+    # По умолчанию — назад на add_account.
+    next_view = request.GET.get("next") or request.POST.get("next") or "add_account"
+
+    if request.method == "POST":
+        mother_name = request.POST.get("mother_name", "").strip()
+        if not mother_name:
+            messages.error(request, "Поле «Имя материнской компании» не может быть пустым.")
+            return render(request, "mother_add.html", {
+                "prev_mother_name": "",
+                "next": next_view,
+            })
+
+        # Вставляем новую мат.компанию
+        with connections['pgDataforSMS'].cursor() as cursor:
+            cursor.execute("""
+                INSERT INTO descr.mother (name)
+                VALUES (%s)
+                RETURNING id;
+            """, [mother_name])
+            new_mother_id = cursor.fetchone()[0]
+
+        messages.success(request, f"Материнская компания «{mother_name}» добавлена (ID={new_mother_id}).")
+
+        # Редирект обратно на нужную view
+        return redirect(f"sms_blinoff:{next_view}")
+
+    # GET
+    return render(request, "mother_add.html", {
+        "prev_mother_name": "",
+        "next": next_view,
+    })
