@@ -8,4 +8,7 @@ urlpatterns = [
     path("companies/add/", views.add_company, name="add_account"),
     path("mother/add/", views.add_mother, name="add_mother"),
     path("mother/", views.mother_list, name="mother_list"),
+    path("alfa/",       views.alfa_list,    name="alfa_list"),
+    path("alfa/add/",   views.add_alfa,     name="add_alfa"),
+
 ]

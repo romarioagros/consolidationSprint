@@ -154,7 +154,6 @@ def add_mother(request):
     })    
 
 
-
 def mother_list(request):
     """
     Показывает все записи из descr.mother и кнопку «Добавить мат.компанию».
@@ -204,4 +203,115 @@ def add_mother(request):
     return render(request, "mother_add.html", {
         "prev_mother_name": "",
         "next": next_view,
+    })
+
+def alfa_list(request):
+    """
+    Выдаёт страницу со всеми записями из descr.alfa_numbers_new,
+    присоединяя имя матери из descr.mother.
+    """
+    with connections['pgDataforSMS'].cursor() as c:
+        c.execute("""
+            SELECT
+              AN.id,
+              AN.alfa_name,
+              M.name       AS mother_name,
+              AN.price,
+              AN.currency,
+              AN.fee,
+              AN.data_start,
+              AN.data_end,
+              AN.data_created
+            FROM descr.alfa_numbers_new AN
+            LEFT JOIN descr.mother M
+              ON AN.id_company = M.id
+            ORDER BY AN.id ASC;
+        """)
+        cols = [col[0] for col in c.description]
+        rows = [dict(zip(cols, row)) for row in c.fetchall()]
+
+    return render(request, "alfa_numbers.html", {
+        "alfa_list": rows,
+    })
+def add_alfa(request):
+    # 1. Подгружаем список материнских компаний
+    with connections['pgDataforSMS'].cursor() as cursor:
+        cursor.execute("SELECT id, name FROM descr.mother ORDER BY name;")
+        mothers = [{"id": r[0], "name": r[1]} for r in cursor.fetchall()]
+
+    if request.method == "POST":
+        # 2. Читаем форму
+        alfa_name   = request.POST.get("alfa_name", "").strip()
+        mother_id   = request.POST.get("mother_id", "").strip()
+        price       = request.POST.get("price", "").strip()
+        currency    = request.POST.get("currency", "").strip()
+        fee         = request.POST.get("fee", "").strip()
+        data_start  = request.POST.get("data_start", "").strip()
+        data_end    = request.POST.get("data_end", "").strip()
+
+        # 3. Получаем IP клиента
+        xff = request.META.get("HTTP_X_FORWARDED_FOR")
+        client_ip = xff.split(",")[0].strip() if xff else request.META.get("REMOTE_ADDR", "")
+
+        # 4. Объявляем переменную error заранее
+        error = None
+
+        # 5. Валидация
+        if not alfa_name:
+            error = "Поле Alfa Name не может быть пустым."
+        elif not mother_id:
+            error = "Нужно выбрать материнскую компанию."
+        # сюда можно добавить проверки на price, currency и т.д.
+
+        # 6. Если есть ошибка — возвращаем форму обратно
+        if error:
+            messages.error(request, error)
+            return render(request, "alfa_add.html", {
+                "mothers": mothers,
+                "prev_alfa_name": alfa_name,
+                "prev_mother_id": mother_id,
+                "prev_price": price,
+                "prev_currency": currency,
+                "prev_fee": fee,
+                "prev_data_start": data_start,
+                "prev_data_end": data_end,
+            })
+
+        # 7. Вычисляем новый ID
+        with connections['pgDataforSMS'].cursor() as cursor:
+            cursor.execute("SELECT COALESCE(MAX(id), 0) FROM descr.alfa_numbers_new;")
+            new_id = cursor.fetchone()[0] + 1
+
+        # 8. Вставляем запись
+        with connections['pgDataforSMS'].cursor() as cursor:
+            cursor.execute("""
+                INSERT INTO descr.alfa_numbers_new 
+                  (id, alfa_name, id_company, price, currency, fee,
+                   data_start, data_end, ips)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
+            """, [
+                new_id,
+                alfa_name,
+                int(mother_id),
+                price,
+                currency,
+                fee,
+                data_start,
+                data_end,
+                client_ip,  # единственный IP
+            ])
+
+        messages.success(request, "Alfa-номер добавлен.")
+        return redirect("sms_blinoff:alfa_list")
+
+    # GET — отрисовываем пустую форму
+    return render(request, "alfa_add.html", {
+        "mothers": mothers,
+        "prev_alfa_name": "",
+        "prev_mother_id": "",
+        "prev_price": "",
+        "prev_currency": "",
+        "prev_fee": "",
+        "prev_data_start": "",
+        "prev_data_end": "",
     })
