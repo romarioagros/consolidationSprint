@@ -1,15 +1,18 @@
-from django.urls import path , include
+# reestr/urls.py
+from django.urls import path, include
+from django.contrib.auth.decorators import login_required
 from . import views
-from .views import reestr_list
-from .views import add_reestr
-from .views import reports_periods
-from .views import export_report_excel
 
 urlpatterns = [
-    path('', reestr_list, name='reestr_list'),
-    path('export/', views.export_excel, name='reestr_export'),
-   path('reports/export/', export_report_excel, name='export_report_excel'),
-    path('reports/', reports_periods, name='reports_periods'),
-    path('add/', add_reestr, name='reestr_add'),  # ← новая страница
-    path('sms_blinoff/', include('sms_blinoff.urls')),  
+    path('',                    login_required(views.reestr_list),    name='reestr_list'),
+    path('add/',                login_required(views.add_reestr),     name='reestr_add'),
+    path('export/',             login_required(views.export_excel),   name='reestr_export'),
+
+    # Если нужны отчёты внутри модуля:
+    path('reports/',            login_required(views.reports_periods),name='reestr_reports'),
+    path('reports/export/',     login_required(views.export_report_excel), name='reestr_export_report'),
+
+    # Вложенное приложение sms_blinoff (если у него своя аутентификация, 
+    # то там тоже оберните его views в login_required или включите его урлы через middleware)
+   
 ]

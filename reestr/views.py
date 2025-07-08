@@ -9,8 +9,10 @@ from django.views.decorators.csrf import csrf_exempt  # временно, есл
 from django.utils import timezone
 import os
 from django.conf import settings
+from django.contrib.auth.decorators import login_required
 
 
+@login_required
 def load_sql(file_name):
     path = os.path.join(settings.BASE_DIR, 'reestr', 'sql', file_name)
     with open(path, 'r', encoding='utf-8') as file:
@@ -18,6 +20,7 @@ def load_sql(file_name):
 
 
 
+@login_required
 def reestr_list(request):
     with connections['pg_consolidation'].cursor() as cursor:
         cursor.execute('''
@@ -32,6 +35,7 @@ def reestr_list(request):
 
     return render(request, 'reestr_list.html', {'reestr': rows})
 
+@login_required
 def export_excel(request):
     with connections['pg_consolidation'].cursor() as cursor:
         cursor.execute('''
@@ -52,9 +56,11 @@ def export_excel(request):
     df.to_excel(response, index=False)
     return response
 
+@login_required
 def index(request):
     return render(request, 'index.html')
 
+@login_required
 def get_client_ip(request):
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
     if x_forwarded_for:
@@ -64,6 +70,7 @@ def get_client_ip(request):
     return ip
 
 @csrf_exempt
+@login_required
 def add_reestr(request):
 
     
@@ -133,7 +140,7 @@ def add_reestr(request):
             })
 
     return render(request, 'period_select.html', {'periods': parsed})
-
+@login_required
 def parse_period_name(month, year):
     eng_months = {
         'Январь': 'January', 'Февраль': 'February', 'Март': 'March',
@@ -144,6 +151,7 @@ def parse_period_name(month, year):
     return f"{eng_months.get(month, month)}_{year}"
 
 @csrf_exempt
+@login_required
 def reports_periods(request):
     context = {}
     with connections['pg_consolidation'].cursor() as cursor:
@@ -180,6 +188,7 @@ def reports_periods(request):
     return render(request, 'period_select.html', context)
 
 
+@login_required
 def export_report_excel(request):
     month = request.GET.get('month')
     year = request.GET.get('year')

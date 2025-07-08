@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from django.contrib import messages
-
+import datetime
 import pandas as pd
 from django.http import HttpResponse
 from django.http import JsonResponse
@@ -315,3 +315,120 @@ def add_alfa(request):
         "prev_data_start": "",
         "prev_data_end": "",
     })
+
+
+def sms_services(request):
+    """
+    Список из descr.service_new с подцеплённым именем матери.
+    """
+    with connections['pgDataforSMS'].cursor() as c:
+        c.execute("""
+            SELECT
+              N.id,
+              mother_id    AS mother_id,
+              M.name       AS mother_name,
+              N.descr,
+              N.agreement,
+              N.price,
+              N.currency,
+              N.type,
+              N.created_at,
+              N.ip_address
+            from descr.service_new N
+left join descr.mother M on
+n.mother_id = M.id
+            ORDER BY N.id;
+        """)
+        cols = [col[0] for col in c.description]
+        rows = [dict(zip(cols, row)) for row in c.fetchall()]
+
+    return render(request, "sms_services.html", {
+        "services": rows,
+    })
+
+
+def category3_list(request):
+    """
+    Показывает все строки из SMSc.Category_3.
+    """
+    with connections['pgDataforSMS'].cursor() as cursor:
+        cursor.execute("""
+            SELECT name_3, price
+            FROM "SMSc"."Category_3"
+            ORDER BY name_3;
+        """)
+        columns = [col[0] for col in cursor.description]
+        rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+    return render(request, "category3_list.html", {
+        "categories": rows,
+    })
+
+
+def paymed_sms_list(request):
+    """
+    Показывает все строки из SMSc.Category_3.
+    """
+    with connections['pgDataforSMS'].cursor() as cursor:
+        cursor.execute("""
+            SELECT
+                    P.*,
+                    C.name       AS company_name  -- или любые нужные вам поля из C
+                    FROM payments.paymed_sms AS P
+                    LEFT JOIN descr.companies   AS C
+                        ON P.comp_id = C.id;
+        """)
+        columns = [col[0] for col in cursor.description]
+        rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+    return render(request, "paymed_sms_list.html", {
+        "payments": rows,
+    })   
+
+
+def sms_periode(request, period=None):
+    # 1) Определяем даты
+    today = datetime.date.today()
+    yesterday = today - datetime.timedelta(days=1)
+
+    if period:
+        try:
+            start_str, end_str = period.split("-")
+            start_date = datetime.datetime.strptime(start_str, "%Y.%m.%d").date()
+            end_date   = datetime.datetime.strptime(end_str,   "%Y.%m.%d").date()
+        except ValueError:
+            messages.error(request, "Неправильный формат периода, ожидается YYYY.MM.DD-YYYY.MM.DD")
+            return redirect("sms_blinoff:sms_periode")
+    else:
+        start_date = yesterday
+        end_date   = today
+
+    # 2) Выполняем запрос
+    with connections['pg_consolidation'].cursor() as cursor:
+        cursor.execute("""
+            SELECT
+              date_trunc('day', dt_hour)      AS day,
+              C.name                          AS name_sq,
+              H.num_cg_direction,
+              H.num_cd_direction,
+              V.name                          AS name_sd,
+              SUM(H.count_amount)             AS total_count
+            FROM sms.hourly_stats_blinoff H
+            LEFT JOIN description.companies C
+              ON H.num_cg_direction = C.id
+            LEFT JOIN description.companies V
+              ON H.num_cd_direction = V.id
+            WHERE dt_hour >= %s
+              AND dt_hour <  %s + INTERVAL '1 day'
+            GROUP BY 1,2,3,4,5
+            ORDER BY 1,2,3,4,5;
+        """, [start_date, end_date])
+        cols = [c[0] for c in cursor.description]
+        rows = [dict(zip(cols, row)) for row in cursor.fetchall()]
+
+    return render(request, "hour_sms_blinoff.html", {
+        "rows": rows,
+        "start": start_date,
+        "end":   end_date,
+    })
+
