@@ -1,0 +1,24 @@
+<li class="nav-item dropdown">
+    <a class="nav-link dropdown-toggle" href="#" id="smsMenu" role="button"
+       data-bs-toggle="dropdown" aria-expanded="false">
+      📁 SMS Blinoff
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="smsMenu">
+      <li><a class="dropdown-item" href="{% url 'sms_blinoff:company_list' %}">Companies</a></li>
+      <li><a class="dropdown-item" href="{% url 'sms_blinoff:mother_list' %}">Mothers</a></li>
+      <li><hr class="dropdown-divider"></li>
+      <li><a class="dropdown-item" href="{% url 'sms_blinoff:alfa_list' %}">Alfa Numbers</a></li>
+      <li><a class="dropdown-item" href="{% url 'sms_blinoff:sms_services' %}">Services</a></li>
+      <li><a class="dropdown-item" href="{% url 'sms_blinoff:category3_list' %}">Category3</a></li>
+      <li><a class="dropdown-item" href="{% url 'sms_blinoff:paymed_sms_list' %}">Paymed SMS</a></li>
+      <li><hr class="dropdown-divider"></li>
+  
+      <li class="dropdown-submenu">
+        <a class="dropdown-item dropdown-toggle" href="#">SMS Statistics</a>
+        <ul class="dropdown-menu">
+          <li><a class="dropdown-item" href="{% url 'sms_blinoff:sms_periode' %}">Hour SMS</a></li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+  

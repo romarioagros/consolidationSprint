@@ -11,8 +11,7 @@ urlpatterns = [
     # Если нужны отчёты внутри модуля:
     path('reports/',            login_required(views.reports_periods),name='reestr_reports'),
     path('reports/export/',     login_required(views.export_report_excel), name='reestr_export_report'),
-
-    # Вложенное приложение sms_blinoff (если у него своя аутентификация, 
-    # то там тоже оберните его views в login_required или включите его урлы через middleware)
+   
+    
    
 ]

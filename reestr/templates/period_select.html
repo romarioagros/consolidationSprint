@@ -37,18 +37,14 @@
 {% if report_data %}
 <h4>📁 Отчёт за {{ selected_month }} {{ selected_year }}</h4>
 <div class="table-responsive">
-<table id="report-table" class="table table-bordered table-striped table-sm">
+<table id="report-table" class="table table-bordered table-striped table-sm datatable">
     <thead class="table-light">
         <tr>
             <th>ID</th><th>Service ID</th><th>Revenue Type</th><th>Contractor</th>
             <th>Contract Number</th><th>Sign Date</th><th>Subject</th><th>Code</th>
             <th>Type</th><th>Status</th><th>Amount</th><th>Cost (с НДС)</th>
         </tr>
-        <tr>
-            {% for _ in report_data.0 %}
-                <th><input type="text" class="form-control form-control-sm" placeholder="Фильтр"></th>
-            {% endfor %}
-        </tr>
+       
     </thead>
     <tbody>
         {% for row in report_data %}
@@ -73,33 +69,4 @@
 {% endif %}
 {% endblock %}
 
-{% block scripts %}
-<script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-<script>
-$(document).ready(function () {
-    let table = $('#report-table').DataTable({
-        orderCellsTop: true,
-        fixedHeader: true,
-        language: {
-            search: "Поиск:",
-            lengthMenu: "Показать _MENU_ записей",
-            zeroRecords: "Ничего не найдено",
-            info: "Показано _START_–_END_ из _TOTAL_",
-            paginate: { previous: "←", next: "→" }
-        }
-    });
 
-    $('#report-table thead tr:eq(1) th input').on('keyup change', function () {
-        let colIndex = $(this).parent().index();
-        table.column(colIndex).search(this.value).draw();
-    });
-});
-
-function exportToExcel() {
-    let table = document.querySelector("#report-table");
-    let wb = XLSX.utils.table_to_book(table, { sheet: "Отчёт", raw: true });
-    XLSX.writeFile(wb, "report_{{ selected_month }}_{{ selected_year }}.xlsx");
-}
-</script>
-{% endblock %}

@@ -5,10 +5,12 @@
 {% block content %}
 <h2>📁 Реестр договоров</h2>
 <div class="mb-3">
-    <a href="{% url 'reestr_export' %}" class="btn btn-success">📥 Экспорт в Excel</a>
+    <div class="mb-3">
+        <button id="export-btn" class="btn btn-success">📥 Экспорт в Excel</button>
+    </div>
     <a href="{% url 'reestr_add' %}" class="btn btn-primary">➕ Добавить</a>
 </div>
-<table id="reestr-table" class="table table-bordered table-striped table-sm">
+<table id="reestr-table" class="table table-bordered table-striped table-sm datatable">
     <thead class="table-light">
         <tr>
             <th>ID</th>
@@ -22,11 +24,7 @@
             <th>Type</th>
             <th>Status</th>
         </tr>
-        <tr>
-            {% for _ in reestr.0 %}
-                <th><input type="text" placeholder="Фильтр" class="form-control form-control-sm" /></th>
-            {% endfor %}
-        </tr>
+        
     </thead>
     <tbody>
         {% for row in reestr %}
@@ -48,29 +46,3 @@
 {% endblock %}
 
 
-
-{% block scripts %}
-<script>
-$(document).ready(function () {
-    let table = $('#reestr-table').DataTable({
-        orderCellsTop: true,
-        fixedHeader: true,
-        language: {
-            search: "Поиск:",
-            lengthMenu: "Показать _MENU_ записей",
-            zeroRecords: "Ничего не найдено",
-            info: "Показано _START_–_END_ из _TOTAL_",
-            paginate: {
-                previous: "←",
-                next: "→"
-            }
-        }
-    });
-
-    $('#reestr-table thead tr:eq(1) th input').on('keyup change', function () {
-        let colIndex = $(this).parent().index();
-        table.column(colIndex).search(this.value).draw();
-    });
-});
-</script>
-{% endblock %}

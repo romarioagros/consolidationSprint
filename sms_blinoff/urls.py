@@ -49,4 +49,8 @@ urlpatterns = [
     path('sms_periode/<str:period>/',
          login_required(views.sms_periode),
          name='sms_periode'),
+
+ path('sms/mother_delete/<int:id>/', login_required(views.delete_mother), name='delete_mother'),
+
+
 ]

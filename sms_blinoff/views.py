@@ -10,6 +10,7 @@ from django.views.decorators.csrf import csrf_exempt  # временно, есл
 from django.utils import timezone
 import os
 from django.conf import settings
+from .decorators import group_required
 # Create your views here.
 
 
@@ -30,6 +31,7 @@ def company_list(request):
     return render(request, 'company_list.html', {'companies': rows})
 
 
+@group_required('addMother', redirect_to='sms_blinoff:mother_list', message="У вас нет прав для добавления записи.")
 def add_company(request):
 
     """
@@ -118,7 +120,7 @@ def add_company(request):
     })
 
 
-def add_mother(request):
+
 
 
 
@@ -167,6 +169,8 @@ def mother_list(request):
         "mothers": rows,
     })
 
+
+@group_required('addMother', redirect_to='sms_blinoff:mother_list', message="У вас нет прав для добавления записи.")
 def add_mother(request):
     """
     Форма создания новой материнской компании.
@@ -204,6 +208,40 @@ def add_mother(request):
         "prev_mother_name": "",
         "next": next_view,
     })
+
+
+@group_required('canDelMother', redirect_to='sms_blinoff:mother_list', message="У вас нет прав для удаления записей.")
+def delete_mother(request, id):
+    try:
+        with connections['pgDataforSMS'].cursor() as cursor:
+            # Получаем имя удаляемой записи
+            cursor.execute('SELECT id, name FROM descr.mother WHERE id = %s', [id])
+            row = cursor.fetchone()
+            if not row:
+                messages.error(request, 'Запись не найдена.')
+                return redirect('sms_blinoff:mother_list')
+
+            id = row[0]
+            name = row[1]
+
+            # Удаляем запись из agrements.reestr
+            cursor.execute('DELETE FROM descr.mother WHERE id = %s', [id])
+
+            # Логируем в descr.mother_deleted
+            cursor.execute('''
+                INSERT INTO descr.mother_deleted (id_del ,name, user_del)
+                VALUES (%s,%s, %s)
+            ''', [id,name, request.user.username])
+
+        messages.success(request, f'Запись {name} успешно удалена.')
+        return redirect('sms_blinoff:mother_list')
+
+    except Exception as e:
+        messages.error(request, f'Ошибка при удалении: {e}')
+        return redirect('sms_blinoff:mother_list')
+   
+
+
 
 def alfa_list(request):
     """
@@ -432,3 +470,8 @@ def sms_periode(request, period=None):
         "end":   end_date,
     })
 
+
+
+
+
+ 
