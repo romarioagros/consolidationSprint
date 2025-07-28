@@ -111,4 +111,28 @@ class RtuDstDaysView(SQLReportView):
     NameTab = 'Dst Name'    
 
 
+class PostgresSrcDaysView(SQLReportView):
+    sql_filename = 'postgresSrcDays.sql'
+    HeadOfTable = 'отчет по голосу Postgres для Src'
+    NameTab = 'Src Name'  
+
+
+class PostgresDstDaysView(SQLReportView):
+    sql_filename = 'postgresDstDays.sql'
+    HeadOfTable = 'отчет по голосу Postgres для Dst'
+    NameTab = 'Dst Name'    
+
+
+
+class MvtsSrcDaysView(SQLReportView):
+    sql_filename = 'mvtsSrcDays.sql'
+    HeadOfTable = 'отчет по голосу Mvts для Src'
+    NameTab = 'Src Name'  
+
+
+class MvtsDstDaysView(SQLReportView):
+    sql_filename = 'mvtsDstDays.sql'
+    HeadOfTable = 'отчет по голосу Mvts для Dst'
+    NameTab = 'Dst Name'    
+
 

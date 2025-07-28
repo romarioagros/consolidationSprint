@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+
+{% block title %}IDs Reestr & Companies{% endblock %}
+
+{% block content %}
+<h2 class="mt-3 mb-4">📋 список соответсвия IDs договоров и б.д </h2>
+
+<div class="mb-3">
+  <button id="export-btn" class="btn btn-success">📥 Экспорт в Excel</button>
+</div>
+
+
+
+<div class="mb-4">
+
+    ➕ Добавить соотвествие
+  </a>
+</div>
+
+<div class="table-responsive">
+  <table id="services-table" class="table table-bordered table-striped table-sm datatable">
+    <thead class="table-light">
+      <tr>
+        <th>ID</th>
+        <th>ID Agr</th>
+        <th>Mother id </th>
+        <th>created_at</th>
+        <th>name_table</th>
+        <th>Имя в договоре </th>
+        <th>Имя в б.д </th>
+      
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in ids %}
+      <tr>
+        <td>{{ s.id }}</td>
+        <td>{{ s.id_agr }}</td>
+        <td>{{ s.mother_id }}</td>
+        <td>{{ s.created_at }}</td>
+        <td>{{ s.name_table }}</td>
+        <td>{{ s.contractor }}</td>
+        <td>{{ s.name }}</td>
+        
+    </tr>
+      {% empty %}
+      <tr><td colspan="10" class="text-center">Нет записей</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+
+</div>
+
+{% endblock %}

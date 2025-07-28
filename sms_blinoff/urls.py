@@ -52,5 +52,9 @@ urlpatterns = [
 
  path('sms/mother_delete/<int:id>/', login_required(views.delete_mother), name='delete_mother'),
 
+  path('showID/',
+         login_required(views.showIDReestrandMother),
+         name='showID'),
+
 
 ]

@@ -141,7 +141,7 @@ def add_reestr(request):
             })
 
     return render(request, 'period_select.html', {'periods': parsed})
-
+@login_required
 def parse_period_name(month, year):
     eng_months = {
         'Январь': 'January', 'Февраль': 'February', 'Март': 'March',

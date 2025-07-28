@@ -49,6 +49,24 @@
 
 
 
+     <li class="dropdown-submenu">
+        <a class="dropdown-item dropdown-toggle" href="#">Postgres</a>
+        <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="{% url 'voice:postgresSrcDays' %}">SrcMinutsDaysPostgres</a></li>
+            <li><a class="dropdown-item" href="{% url 'voice:postgresDstDays' %}">DstMinutsDaysPostgres</a></li>
+        </ul>
+     </li>
+
+
+     
+     <li class="dropdown-submenu">
+        <a class="dropdown-item dropdown-toggle" href="#">MVTS</a>
+        <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="{% url 'voice:mvtsSrcDays' %}">SrcMinutsDaysMVTS</a></li>
+            <li><a class="dropdown-item" href="{% url 'voice:mvtsDstDays' %}">DstMinutsDaysMVTS</a></li>
+        </ul>
+     </li>
+
 
     </ul>
   </li>

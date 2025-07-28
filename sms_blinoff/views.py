@@ -472,6 +472,26 @@ def sms_periode(request, period=None):
 
 
 
+def showIDReestrandMother(request):
+    """
+    Показывает все строки из SMSc.Category_3.
+    """
+    with connections['pg_consolidation'].cursor() as cursor:
+        cursor.execute("""
+            select I.*, R.contractor, M.name from agrements.ids I
+            left join agrements.reestr R  on
+            i.id_agr= R.id
+            left join  description.mother M  on
+            i.mother_id = M.id
+            order by 2
+        """)
+        columns = [col[0] for col in cursor.description]
+        rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+    return render(request, "idsList.html", {
+        "ids": rows,
+    })   
+
 
 
  

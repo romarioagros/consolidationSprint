@@ -11,6 +11,10 @@ from .views import (
     RtuNew2DstDaysView,
     RtuCbSrcDaysView,
     RtuDstDaysView,
+    PostgresSrcDaysView,
+    PostgresDstDaysView,
+    MvtsSrcDaysView,
+    MvtsDstDaysView,
     
     
     )
@@ -27,4 +31,8 @@ urlpatterns = [
     path('rtuNew2DstDays/',  RtuNew2DstDaysView.as_view(), name='rtuNew2DstDays'),
     path('rtuCbSrcDays/',  RtuCbSrcDaysView.as_view(), name='rtuCbSrcDays'),
     path('rtuCbDstDays/',  RtuDstDaysView.as_view(), name='rtuCbDstDays'),
+    path('postgresSrcDays/',  PostgresSrcDaysView.as_view(), name='postgresSrcDays'),
+    path('postgresDstDays/',  PostgresDstDaysView.as_view(), name='postgresDstDays'),
+    path('mvtsSrcDays/',  MvtsSrcDaysView.as_view(), name='mvtsSrcDays'),
+    path('mvtsDstDays/',  MvtsDstDaysView.as_view(), name='mvtsDstDays'),
 ]
