@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+
+{% block title %}Массовое редактирование{% endblock %}
+
+{% block content %}
+<h3>🛠 Массовое редактирование Alfa-номеров</h3>
+
+<div class="alert alert-info">
+  <strong>Вы выбрали {{ ids|length }} записей:</strong><br>
+  <code>{{ ids|join:", " }}</code>
+</div>
+
+<form method="post">
+  {% csrf_token %}
+  {% for id in ids %}
+    <input type="hidden" name="ids" value="{{ id }}">
+  {% endfor %}
+
+  <div class="row">
+    <div class="col-md-4">
+      <label class="form-label">💰 Новая цена</label>
+      <input type="number" name="price" step="0.01" class="form-control" placeholder="Оставьте пустым, чтобы не менять">
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">💱 Валюта</label>
+      <input type="text" name="currency" class="form-control" placeholder="например, USD">
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">📟 Абонплата</label>
+      <input type="number" name="fee" step="0.01" class="form-control" placeholder="Оставьте пустым, чтобы не менять">
+    </div>
+  </div>
+
+  <div class="row mt-3">
+    <div class="col-md-6">
+      <label class="form-label">📅 Дата начала</label>
+      <input type="date" name="data_start" class="form-control">
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">📅 Дата окончания</label>
+      <input type="date" name="data_end" class="form-control">
+    </div>
+  </div>
+
+  <div class="row mt-3">
+    <div class="col-md-6">
+      <label class="form-label">🏢 Компания</label>
+      <select name="mother_id" class="form-select">
+        <option value="">(Не менять)</option>
+        {% for m in mothers %}
+          <option value="{{ m.id }}">{{ m.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+
+  <div class="mt-4">
+    <button name="apply_changes" class="btn btn-primary">💾 Применить изменения</button>
+    <a href="{% url 'sms_blinoff:alfa_list' %}" class="btn btn-secondary">↩ Отмена</a>
+  </div>
+</form>
+{% endblock %}

@@ -30,6 +30,11 @@ urlpatterns = [
          login_required(views.add_alfa),
          name='add_alfa'),
 
+
+     path("alfa/<int:alfa_id>/edit/", login_required(views.edit_alfa), name="edit_alfa"),
+
+
+
     path('services/',
          login_required(views.sms_services),
          name='sms_services'),
@@ -50,11 +55,16 @@ urlpatterns = [
          login_required(views.sms_periode),
          name='sms_periode'),
 
- path('sms/mother_delete/<int:id>/', login_required(views.delete_mother), name='delete_mother'),
+     path('sms/mother_delete/<int:id>/', login_required(views.delete_mother), name='delete_mother'),
 
-  path('showID/',
+     path('showID/',
          login_required(views.showIDReestrandMother),
          name='showID'),
+
+     path("alfa/<int:alfa_id>/copy/", login_required(views.copy_alfa), name="copy_alfa"),
+
+     path('alfa/mass-edit/', views.bulk_edit_alfa, name='mass_edit_alfa'),
+
 
 
 ]

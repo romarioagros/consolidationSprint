@@ -10,7 +10,10 @@ from django.views.decorators.csrf import csrf_exempt  # временно, есл
 from django.utils import timezone
 import os
 from django.conf import settings
-from .decorators import group_required
+from .decorators import group_required 
+from django.views.decorators.http import require_http_methods
+from datetime import datetime
+from decimal import Decimal
 # Create your views here.
 
 
@@ -353,6 +356,339 @@ def add_alfa(request):
         "prev_data_start": "",
         "prev_data_end": "",
     })
+
+def edit_alfa(request, alfa_id):
+    # Получаем текущую запись
+    with connections['pgDataforSMS'].cursor() as cursor:
+        cursor.execute("""
+            SELECT id, alfa_name, id_company, price, currency, fee,
+                   data_start, data_end
+            FROM descr.alfa_numbers_new
+            WHERE id = %s;
+        """, [alfa_id])
+        row = cursor.fetchone()
+
+        if not row:
+            messages.error(request, "Alfa-номер не найден.")
+            return redirect("sms_blinoff:alfa_list")
+
+        current = {
+            "id": row[0],
+            "alfa_name": row[1],
+            "id_company": row[2],
+            "price": float(row[3]),
+            "currency": row[4],
+            "fee": float(row[5]),
+            "data_start": row[6].date() if isinstance(row[6], datetime) else row[6],
+            "data_end": row[7].date() if isinstance(row[7], datetime) else row[7],
+        }
+
+    # Загружаем список материнских компаний
+    with connections['pgDataforSMS'].cursor() as cursor:
+        cursor.execute("SELECT id, name FROM descr.mother ORDER BY name;")
+        mothers = [{"id": r[0], "name": r[1]} for r in cursor.fetchall()]
+
+    if request.method == "POST":
+        # Обновлённые данные из формы
+        updated = {
+            "alfa_name": request.POST.get("alfa_name", "").strip(),
+            "id_company": int(request.POST.get("mother_id", "").strip()),
+            "price": float(request.POST.get("price", "0").strip() or 0),
+            "currency": request.POST.get("currency", "").strip(),
+            "fee": float(request.POST.get("fee", "0").strip() or 0),
+            "data_start": request.POST.get("data_start", "").strip(),
+            "data_end": request.POST.get("data_end", "").strip(),
+        }
+
+        # IP пользователя
+        xff = request.META.get("HTTP_X_FORWARDED_FOR")
+        client_ip = xff.split(",")[0].strip() if xff else request.META.get("REMOTE_ADDR", "")
+
+        # Преобразуем даты
+        try:
+            updated["data_start"] = datetime.fromisoformat(updated["data_start"]).date()
+        except ValueError:
+            updated["data_start"] = current["data_start"]
+
+        try:
+            updated["data_end"] = datetime.fromisoformat(updated["data_end"]).date()
+        except ValueError:
+            updated["data_end"] = current["data_end"]
+
+        # Проверка на изменения
+        changed = (
+            updated["alfa_name"] != current["alfa_name"] or
+            updated["id_company"] != current["id_company"] or
+            updated["price"] != current["price"] or
+            updated["currency"] != current["currency"] or
+            updated["fee"] != current["fee"] or
+            updated["data_start"] != current["data_start"] or
+            updated["data_end"] != current["data_end"]
+        )
+
+        if changed:
+            # Обновляем запись
+            with connections['pgDataforSMS'].cursor() as cursor:
+                cursor.execute("""
+                    UPDATE descr.alfa_numbers_new
+                    SET alfa_name = %s,
+                        id_company = %s,
+                        price = %s,
+                        currency = %s,
+                        fee = %s,
+                        data_start = %s,
+                        data_end = %s
+                    WHERE id = %s;
+                """, [
+                    updated["alfa_name"],
+                    updated["id_company"],
+                    updated["price"],
+                    updated["currency"],
+                    updated["fee"],
+                    updated["data_start"],
+                    updated["data_end"],
+                    alfa_id
+                ])
+
+                # Запись в историю
+                cursor.execute("""
+                    INSERT INTO descr.alfa_numbers_new_history (
+                        alfa_id,
+                        alfa_name_old, alfa_name_new,
+                        price_old, price_new,
+                        currency_old, currency_new,
+                        fee_old, fee_new,
+                        data_start_old, data_start_new,
+                        data_end_old, data_end_new,
+                        changed_by_ip, changed_by_user
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+                """, [
+                    alfa_id,
+                    current["alfa_name"], updated["alfa_name"],
+                    current["price"], updated["price"],
+                    current["currency"], updated["currency"],
+                    current["fee"], updated["fee"],
+                    current["data_start"], updated["data_start"],
+                    current["data_end"], updated["data_end"],
+                    client_ip,
+                    request.user.username if request.user.is_authenticated else "anonymous"
+                ])
+
+            messages.success(request, "Изменения сохранены.")
+        else:
+            messages.info(request, "Изменений не обнаружено.")
+
+        return redirect("sms_blinoff:alfa_list")
+
+    # GET — отобразить форму
+    return render(request, "alfa_edit.html", {
+        "mothers": mothers,
+        "alfa": current,
+    })
+
+
+
+
+
+@require_http_methods(["GET", "POST"])
+def bulk_edit_alfa(request):
+    # 1. Получаем список ID
+    if request.method == "POST":
+        id_list = [int(i) for i in request.POST.getlist("ids") if i.strip().isdigit()]
+    else:  # GET
+        id_list = [int(i) for i in request.GET.get("ids", "").split(",") if i.strip().isdigit()]
+
+    if not id_list:
+        messages.warning(request, "Вы не выбрали ни одной записи.")
+        return redirect("sms_blinoff:alfa_list")
+
+    # 2. Получаем список компаний
+    with connections['pgDataforSMS'].cursor() as cursor:
+        cursor.execute("SELECT id, name FROM descr.mother ORDER BY name;")
+        mothers = [{"id": r[0], "name": r[1]} for r in cursor.fetchall()]
+
+    # 3. Обработка изменений
+    if request.method == "POST" and 'apply_changes' in request.POST:
+        def parse_float(val):
+            try:
+                return float(val.replace(",", ".").strip())
+            except:
+                return None
+
+        def parse_date(val):
+            try:
+                return datetime.fromisoformat(val).date()
+            except:
+                return None
+
+        new_fields = {
+            "price": parse_float(request.POST.get("price")),
+            "currency": request.POST.get("currency", "").strip() or None,
+            "fee": parse_float(request.POST.get("fee")),
+            "data_start": parse_date(request.POST.get("data_start")),
+            "data_end": parse_date(request.POST.get("data_end")),
+            "id_company": int(request.POST.get("mother_id")) if request.POST.get("mother_id") else None,
+        }
+
+        xff = request.META.get("HTTP_X_FORWARDED_FOR")
+        client_ip = xff.split(",")[0].strip() if xff else request.META.get("REMOTE_ADDR", "")
+        username = request.user.username if request.user.is_authenticated else "anonymous"
+
+        updated_count = 0
+
+        with connections['pgDataforSMS'].cursor() as cursor:
+            for alfa_id in id_list:
+                cursor.execute("SELECT * FROM descr.alfa_numbers_new WHERE id = %s;", [alfa_id])
+                row = cursor.fetchone()
+                if not row:
+                    continue
+
+                colnames = [desc[0] for desc in cursor.description]
+                old = dict(zip(colnames, row))
+
+                updates = {}
+                for key, new_val in new_fields.items():
+                    if new_val is None:
+                        continue
+
+                    old_val = old.get(key)
+                    if isinstance(old_val, Decimal):
+                        try:
+                            old_val = float(old_val)
+                        except:
+                            pass
+                    if isinstance(old_val, datetime):
+                        old_val = old_val.date()
+                    if isinstance(new_val, datetime):
+                        new_val = new_val.date()
+
+                    if new_val != old_val:
+                        updates[key] = new_val
+
+                if updates:
+                    set_clause = ", ".join([f"{k} = %s" for k in updates])
+                    values = list(updates.values()) + [alfa_id]
+                    cursor.execute(f"""
+                        UPDATE descr.alfa_numbers_new
+                        SET {set_clause}
+                        WHERE id = %s;
+                    """, values)
+
+                    cursor.execute("""
+                        INSERT INTO descr.alfa_numbers_new_history (
+                            alfa_id,
+                            alfa_name_old, alfa_name_new,
+                            price_old, price_new,
+                            currency_old, currency_new,
+                            fee_old, fee_new,
+                            data_start_old, data_start_new,
+                            data_end_old, data_end_new,
+                            changed_at, changed_by_ip, changed_by_user
+                        ) VALUES (
+                            %s, %s, %s,
+                            %s, %s,
+                            %s, %s,
+                            %s, %s,
+                            %s, %s,
+                            %s, %s,
+                            NOW(), %s, %s
+                        );
+                    """, [
+                        old["id"],
+                        old["alfa_name"], old["alfa_name"],
+                        old["price"], updates.get("price", old["price"]),
+                        old["currency"], updates.get("currency", old["currency"]),
+                        old["fee"], updates.get("fee", old["fee"]),
+                        old["data_start"], updates.get("data_start", old["data_start"]),
+                        old["data_end"], updates.get("data_end", old["data_end"]),
+                        client_ip,
+                        username
+                    ])
+                    updated_count += 1
+
+        messages.success(request, f"Обновлено {updated_count} записей.")
+        return redirect("sms_blinoff:alfa_list")
+
+    return render(request, "alfa_bulk_edit.html", {
+        "ids": id_list,
+        "mothers": mothers
+    })
+
+
+
+
+def copy_alfa(request, alfa_id):
+    with connections['pgDataforSMS'].cursor() as cursor:
+        cursor.execute("""
+            SELECT id, alfa_name, id_company, price, currency, fee,
+                   data_start, data_end
+            FROM descr.alfa_numbers_new
+            WHERE id = %s;
+        """, [alfa_id])
+        row = cursor.fetchone()
+
+        if not row:
+            messages.error(request, "Исходный Alfa-номер не найден.")
+            return redirect("sms_blinoff:alfa_list")
+
+        original = dict(zip(
+            ["id", "alfa_name", "id_company", "price", "currency", "fee", "data_start", "data_end"],
+            row
+        ))
+
+    # Загружаем список компаний
+    with connections['pgDataforSMS'].cursor() as cursor:
+        cursor.execute("SELECT id, name FROM descr.mother ORDER BY name;")
+        mothers = [{"id": r[0], "name": r[1]} for r in cursor.fetchall()]
+
+    if request.method == "POST":
+        # Чтение формы
+        new_data = {
+            "alfa_name": request.POST.get("alfa_name", "").strip(),
+            "id_company": int(request.POST.get("mother_id", "").strip()),
+            "price": float(request.POST.get("price", 0)),
+            "currency": request.POST.get("currency", "").strip(),
+            "fee": float(request.POST.get("fee", 0)),
+            "data_start": request.POST.get("data_start", "").strip(),
+            "data_end": request.POST.get("data_end", "").strip(),
+        }
+
+        # IP
+        xff = request.META.get("HTTP_X_FORWARDED_FOR")
+        client_ip = xff.split(",")[0].strip() if xff else request.META.get("REMOTE_ADDR", "")
+
+        with connections['pgDataforSMS'].cursor() as cursor:
+            # Новый ID
+            cursor.execute("SELECT COALESCE(MAX(id), 0) FROM descr.alfa_numbers_new;")
+            new_id = cursor.fetchone()[0] + 1
+
+            cursor.execute("""
+                INSERT INTO descr.alfa_numbers_new (
+                    id, alfa_name, id_company, price, currency, fee,
+                    data_start, data_end, ips
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
+            """, [
+                new_id,
+                new_data["alfa_name"],
+                new_data["id_company"],
+                new_data["price"],
+                new_data["currency"],
+                new_data["fee"],
+                new_data["data_start"],
+                new_data["data_end"],
+                client_ip
+            ])
+
+        messages.success(request, "Новая копия успешно создана.")
+        return redirect("sms_blinoff:alfa_list")
+
+    # GET — показать форму
+    return render(request, "alfa_copy.html", {
+        "alfa": original,
+        "mothers": mothers
+    })
+
+
 
 
 def sms_services(request):

@@ -4,20 +4,23 @@
 
 {% block content %}
 <h2 class="mt-3 mb-4">🅰️ Список Alfa-номеров</h2>
+
 <div class="mb-3">
   <button id="export-btn" class="btn btn-success">📥 Экспорт в Excel</button>
 </div>  
 
-<div class="mb-4">
+<div class="mb-4 d-flex gap-2">
   <a href="{% url 'sms_blinoff:add_alfa' %}" class="btn btn-success">
     ➕ Добавить Alfa-номер
   </a>
+  <button id="edit-selected-btn" class="btn btn-warning" disabled>🛠 Массовое редактирование</button>
 </div>
 
 <div class="table-responsive">
   <table id="alfa-table" class="table table-bordered table-striped table-sm datatable">
     <thead class="table-light">
       <tr>
+        <th><input type="checkbox" id="select-all"></th>
         <th>ID</th>
         <th>Alfa Name</th>
         <th>Mother Name</th>
@@ -27,11 +30,14 @@
         <th>Start</th>
         <th>End</th>
         <th>Created</th>
+        <th>✏️</th>
+        <th>📄</th>
       </tr>
     </thead>
     <tbody>
       {% for a in alfa_list %}
         <tr>
+          <td><input type="checkbox" class="row-checkbox" value="{{ a.id }}"></td>
           <td>{{ a.id }}</td>
           <td>{{ a.alfa_name }}</td>
           <td>{{ a.mother_name }}</td>
@@ -41,16 +47,51 @@
           <td>{{ a.data_start }}</td>
           <td>{{ a.data_end }}</td>
           <td>{{ a.data_created }}</td>
+          <td><a href="{% url 'sms_blinoff:edit_alfa' a.id %}" class="btn btn-sm btn-outline-primary">✏️</a></td>
+          <td><a href="{% url 'sms_blinoff:copy_alfa' a.id %}" class="btn btn-sm btn-outline-success">📄</a></td>
         </tr>
       {% empty %}
         <tr>
-          <td colspan="9" class="text-center">Нет записей</td>
+          <td colspan="12" class="text-center">Нет записей</td>
         </tr>
       {% endfor %}
     </tbody>
   </table>
-
- 
->
 </div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const checkboxes = document.querySelectorAll('.row-checkbox');
+    const editBtn = document.getElementById('edit-selected-btn');
+    const selectAll = document.getElementById('select-all');
+
+    function updateButtonState() {
+      const anyChecked = Array.from(checkboxes).some(cb => cb.checked);
+      editBtn.disabled = !anyChecked;
+    }
+
+    // Обработка массового выбора
+    selectAll.addEventListener('change', function () {
+      checkboxes.forEach(cb => cb.checked = this.checked);
+      updateButtonState();
+    });
+
+    // Обработка изменения одного чекбокса
+    checkboxes.forEach(cb => {
+      cb.addEventListener('change', updateButtonState);
+    });
+
+    // Кнопка массового редактирования
+    editBtn.addEventListener('click', function () {
+      const selectedIds = Array.from(checkboxes)
+        .filter(cb => cb.checked)
+        .map(cb => cb.value);
+
+      if (selectedIds.length === 0) return;
+
+      const url = "{% url 'sms_blinoff:mass_edit_alfa' %}?ids=" + selectedIds.join(",");
+      window.location.href = url;
+    });
+  });
+</script>
 {% endblock %}
