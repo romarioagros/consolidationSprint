@@ -1,20 +1,16 @@
 {% extends 'base.html' %}
-{% block title %}Список Alfa-номеров{% endblock %}
+{% block title %}DN numbers{% endblock %}
 
 {% block content %}
-<h2 class="mt-3 mb-4">🅰️ Список Alfa-номеров</h2>
+<h2 class="mt-3 mb-4">🅰️ Список копманий имеющих Dn-numbers</h2>
 
 <div class="mb-3">
   <button id="export-btn" class="btn btn-success">📥 Экспорт в Excel</button>
 </div>  
 
 <div class="mb-4 d-flex gap-2">
-  <a href="{% url 'sms_blinoff:add_alfa' %}" class="btn btn-success">➕ Добавить Alfa-номер</a>
-  <a href="{% url 'sms_blinoff:bulk_add_alfa' %}" class="btn btn-info">📋 Массовое добавление</a>
+  <a href="{% url 'sms_blinoff:add_alfa' %}" class="btn btn-success">➕ Добавить Df-номер</a>
   <button id="edit-selected-btn" class="btn btn-warning" disabled>🛠 Массовое редактирование</button>
-
-  
-
 </div>
 
 <div class="table-responsive">
@@ -23,31 +19,25 @@
       <tr>
         <th><input type="checkbox" id="select-all"></th>
         <th>ID</th>
-        <th>Alfa Name</th>
-        <th>Mother Name</th>
+        <th>ID Comp</th>
+        <th>Name Comp</th>
         <th>Price</th>
-        <th>Currency</th>
-        <th>Fee</th>
-        <th>Start</th>
-        <th>End</th>
-        <th>Created</th>
+        <th>valid from</th>
+        <th>valid to </th>
         <th>✏️</th>
         <th>📄</th>
       </tr>
     </thead>
     <tbody>
-      {% for a in alfa_list %}
+      {% for a in companies %}
         <tr>
           <td><input type="checkbox" class="row-checkbox" value="{{ a.id }}"></td>
           <td>{{ a.id }}</td>
-          <td>{{ a.alfa_name }}</td>
-          <td>{{ a.mother_name }}</td>
+          <td>{{ a.id_comp }}</td>
+          <td>{{ a.name }}</td>
           <td>{{ a.price }}</td>
-          <td>{{ a.currency }}</td>
-          <td>{{ a.fee }}</td>
-          <td>{{ a.data_start }}</td>
-          <td>{{ a.data_end }}</td>
-          <td>{{ a.data_created }}</td>
+          <td>{{ a.valid_from }}</td>
+          <td>{{ a.valid_to }}</td>
           <td><a href="{% url 'sms_blinoff:edit_alfa' a.id %}" class="btn btn-sm btn-outline-primary">✏️</a></td>
           <td><a href="{% url 'sms_blinoff:copy_alfa' a.id %}" class="btn btn-sm btn-outline-success">📄</a></td>
         </tr>

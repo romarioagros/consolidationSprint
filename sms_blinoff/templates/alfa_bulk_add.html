@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>Массовое добавление Alfa-номеров</h2>
+
+<form method="post">
+  {% csrf_token %}
+
+  <div id="alfa-container">
+    {% for name in prev_alfa_names %}
+    <div class="alfa-row">
+      <input type="text" name="alfa_names[]" value="{{ name }}" placeholder="Alfa-номер" required>
+      <button type="button" onclick="removeRow(this)">−</button>
+    </div>
+    {% endfor %}
+  </div>
+
+  <button type="button" onclick="addAlfaRow()">+ Добавить ещё</button>
+  <br><br>
+
+  <label>Материнская компания:</label>
+  <select name="mother_id" required>
+    <option value="">— Выберите —</option>
+    {% for m in mothers %}
+      <option value="{{ m.id }}" {% if m.id|stringformat:"s" == prev_mother_id %}selected{% endif %}>{{ m.name }}</option>
+    {% endfor %}
+  </select><br><br>
+
+  <label>Цена:</label>
+  <input type="text" name="price" value="{{ prev_price }}"><br>
+
+  <label>Валюта:</label>
+  <input type="text" name="currency" value="{{ prev_currency|default:"руб" }}"><br>
+
+  <label>абон плата:</label>
+  <input type="text" name="fee" value="{{ prev_fee }}"><br>
+
+  <label>Дата начала:</label>
+  <input type="date" name="data_start" value="{{ prev_data_start }}"><br>
+
+  <label>Дата окончания:</label>
+  <input type="date" name="data_end" value="{{ prev_data_end }}"><br><br>
+
+  <button type="submit">💾 Сохранить</button>
+  <a href="{% url 'sms_blinoff:alfa_list' %}" class="btn btn-secondary">Отмена</a>
+</form>
+
+<script>
+function addAlfaRow() {
+  const container = document.getElementById("alfa-container");
+  const div = document.createElement("div");
+  div.classList.add("alfa-row");
+  div.innerHTML = `
+    <input type="text" name="alfa_names[]" placeholder="Alfa-номер" required>
+    <button type="button" onclick="removeRow(this)">−</button>
+  `;
+  container.appendChild(div);
+}
+
+function removeRow(btn) {
+  const row = btn.parentElement;
+  row.remove();
+}
+</script>
+
+<style>
+  .alfa-row {
+    margin-bottom: 8px;
+  }
+  input[type="text"] {
+    min-width: 200px;
+  }
+  button[type="button"] {
+    margin-left: 6px;
+  }
+</style>
+{% endblock %}

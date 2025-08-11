@@ -30,6 +30,13 @@ urlpatterns = [
          login_required(views.add_alfa),
          name='add_alfa'),
 
+     path('df_number/add/',
+         login_required(views.add_defNumbers),
+         name='add_dfNumbers'),
+
+
+
+     
 
      path("alfa/<int:alfa_id>/edit/", login_required(views.edit_alfa), name="edit_alfa"),
 
@@ -64,6 +71,9 @@ urlpatterns = [
      path("alfa/<int:alfa_id>/copy/", login_required(views.copy_alfa), name="copy_alfa"),
 
      path('alfa/mass-edit/', views.bulk_edit_alfa, name='mass_edit_alfa'),
+     path('dfNumbers/', login_required(views.dfNumbersPrice), name='dfNumbers'),
+
+     path('alfa/bulk-add/', login_required(views.bulk_add_alfa), name='bulk_add_alfa'),
 
 
 

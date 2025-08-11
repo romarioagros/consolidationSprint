@@ -34,6 +34,29 @@ def company_list(request):
     return render(request, 'company_list.html', {'companies': rows})
 
 
+def dfNumbersPrice(request):
+    with connections['pgDataforSMS'].cursor() as cursor:
+            cursor.execute('''
+                select
+                        DN.id,
+                        Dn.id_comp,
+                        M.name,
+                        DN.price,
+                        DN.valid_from,
+                        DN.valid_to
+                        from  descr.defnumbersprice_new DN
+                        left join descr.mother M
+                        on DN.id_comp = M.id
+                        order by 2
+                            ;
+                    
+        ''')
+            columns = [col[0] for col in cursor.description]
+            rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+    return render(request, 'dfNumbersList.html', {'companies': rows})
+
+
 @group_required('addMother', redirect_to='sms_blinoff:mother_list', message="У вас нет прав для добавления записи.")
 def add_company(request):
 
@@ -616,7 +639,6 @@ def bulk_edit_alfa(request):
 
 
 
-
 def copy_alfa(request, alfa_id):
     with connections['pgDataforSMS'].cursor() as cursor:
         cursor.execute("""
@@ -687,8 +709,6 @@ def copy_alfa(request, alfa_id):
         "alfa": original,
         "mothers": mothers
     })
-
-
 
 
 def sms_services(request):
@@ -829,5 +849,163 @@ def showIDReestrandMother(request):
     })   
 
 
+def add_defNumbers(request):
+    # 1. Подгружаем только те компании, у которых ЕЩЁ НЕТ DN-номеров
+    with connections['pgDataforSMS'].cursor() as cursor:
+        cursor.execute("""
+            SELECT M.id, M.name
+            FROM descr.mother M
+            WHERE NOT EXISTS (
+                SELECT 1 FROM descr.defnumbersprice_new DN
+                WHERE DN.id_comp = M.id
+            )
+            ORDER BY M.name;
+        """)
+        mothers = [{"id": r[0], "name": r[1]} for r in cursor.fetchall()]
+
+    if request.method == "POST":
+        # 2. Читаем форму
+        mother_id   = request.POST.get("mother_id", "").strip()
+        price       = request.POST.get("price", "").strip()
+        valid_from  = request.POST.get("valid_from", "").strip()
+        valid_to    = request.POST.get("valid_to", "").strip()
+
+        # 3. Валидация
+        error = None
+        if not mother_id:
+            error = "Не выбрана компания."
+        elif not price:
+            error = "Не указана цена."
+
+        if error:
+            messages.error(request, error)
+            return render(request, "defnumbers_add.html", {
+                "mothers": mothers,
+                "prev_mother_id": mother_id,
+                "prev_price": price,
+                "prev_valid_from": valid_from,
+                "prev_valid_to": valid_to,
+            })
+
+        # 4. Вычисляем новый ID
+        with connections['pgDataforSMS'].cursor() as cursor:
+            cursor.execute("SELECT COALESCE(MAX(id), 0) FROM descr.defnumbersprice_new;")
+            new_id = cursor.fetchone()[0] + 1
+
+        # 5. Вставляем запись
+        with connections['pgDataforSMS'].cursor() as cursor:
+            cursor.execute("""
+                INSERT INTO descr.defnumbersprice_new
+                  (id, id_comp, price, valid_from, valid_to)
+                VALUES (%s, %s, %s, %s, %s);
+            """, [
+                new_id,
+                int(mother_id),
+                price,
+                valid_from if valid_from else None,
+                valid_to if valid_to else None,
+            ])
+
+        messages.success(request, "DN-номер успешно добавлен.")
+        return redirect("sms_blinoff:dfNumbersPrice")
+
+    # GET — отрисовываем форму
+    return render(request, "defnumbers_add.html", {
+        "mothers": mothers,
+        "prev_mother_id": "",
+        "prev_price": "",
+        "prev_valid_from": "",
+        "prev_valid_to": "",
+    })
 
  
+#@group_required('addAlfa', redirect_to='sms_blinoff:alfa_list', message="У вас нет прав для добавления записей.")
+def bulk_add_alfa(request):
+    # 1. Загружаем список материнских компаний
+    with connections['pgDataforSMS'].cursor() as cursor:
+        cursor.execute("SELECT id, name FROM descr.mother ORDER BY name;")
+        mothers = [{"id": r[0], "name": r[1]} for r in cursor.fetchall()]
+
+    if request.method == "POST":
+        alfa_names = request.POST.getlist("alfa_names[]")
+        mother_id = request.POST.get("mother_id", "").strip()
+        price = request.POST.get("price", "").strip()
+        currency = request.POST.get("currency", "").strip()
+        fee = request.POST.get("fee", "").strip()
+        data_start = request.POST.get("data_start", "").strip()
+        data_end = request.POST.get("data_end", "").strip()
+
+        # Получаем IP
+        xff = request.META.get("HTTP_X_FORWARDED_FOR")
+        client_ip = xff.split(",")[0].strip() if xff else request.META.get("REMOTE_ADDR", "")
+
+        # Проверка на пустые поля
+        if not alfa_names or not any(name.strip() for name in alfa_names):
+            messages.error(request, "Введите хотя бы один Alfa-номер.")
+            return render(request, "alfa_bulk_add.html", {
+                "mothers": mothers,
+                "prev_alfa_names": alfa_names,
+                "prev_mother_id": mother_id,
+                "prev_price": price,
+                "prev_currency": currency,
+                "prev_fee": fee,
+                "prev_data_start": data_start,
+                "prev_data_end": data_end,
+            })
+
+        if not mother_id:
+            messages.error(request, "Выберите материнскую компанию.")
+            return render(request, "alfa_bulk_add.html", {
+                "mothers": mothers,
+                "prev_alfa_names": alfa_names,
+                "prev_mother_id": mother_id,
+                "prev_price": price,
+                "prev_currency": currency,
+                "prev_fee": fee,
+                "prev_data_start": data_start,
+                "prev_data_end": data_end,
+            })
+
+        with connections['pgDataforSMS'].cursor() as cursor:
+            cursor.execute("SELECT COALESCE(MAX(id), 0) FROM descr.alfa_numbers_new;")
+            last_id = cursor.fetchone()[0]
+
+            count = 0
+            for name in alfa_names:
+                name = name.strip()
+                if not name:
+                    continue
+
+                last_id += 1
+                cursor.execute("""
+                    INSERT INTO descr.alfa_numbers_new
+                        (id, alfa_name, id_company, price, currency, fee,
+                         data_start, data_end, ips)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
+                """, [
+                    last_id,
+                    name,
+                    int(mother_id),
+                    price or None,
+                    currency or None,
+                    fee or None,
+                    data_start or None,
+                    data_end or None,
+                    client_ip,
+                ])
+                count += 1
+
+        messages.success(request, f"Добавлено {count} Alfa-номеров.")
+        return redirect("sms_blinoff:alfa_list")
+
+    # GET-запрос — рендерим пустую форму
+    return render(request, "alfa_bulk_add.html", {
+        "mothers": mothers,
+        "prev_alfa_names": [""],
+        "prev_mother_id": "",
+        "prev_price": "",
+        "prev_currency": "",
+        "prev_fee": "",
+        "prev_data_start": "",
+        "prev_data_end": "",
+    })
