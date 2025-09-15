@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %} список Пользователей Битрикс {% endblock %}
+
+{% block content %}
+  <h2 class="mt-3 mb-4">🏷️ список Пользователей Битрикс </h2>
+
+  <div class="mb-3">
+    <button id="export-btn" class="btn btn-success">📥 Экспорт в Excel</button>
+</div>
+
+  {% if messages %}
+    <div class="container mb-4">
+      {% for msg in messages %}
+        <div class="alert alert-{{ msg.tags }}">{{ msg }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+
+
+  <div class="table-responsive">
+    <table id="bitrix-users" class="table table-bordered table-striped table-sm datatable"   data-order-col="4" data-order-dir="desc">
+      <thead class="table-light">
+        <tr>
+          <th>ID</th>
+          <th>Имя</th>
+          <th>Отчество</th>
+          <th>Фамилие</th>
+          <th>email</th>
+          <th class="no-wrap">рабочий телефон</th>
+          <th>д.р</th>
+          <th>Отдел</th>
+          <th>позиция</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in files %}
+          <tr>
+            <td>{{ m.id }}</td>
+            <td>{{ m.name }}</td>
+            <td>{{ m.second_name }}</td>
+            <td>{{ m.last_name }}</td>
+            <td>{{ m.email }}</td>
+            <td>{{ m.work_phone }}</td>
+            <td>{{ m.p_b }}</td>
+            <td>{{ m.work_department }}</td>
+            <td>{{ m.work_position }}</td>
+            
+            
+
+
+
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="8" class="text-center">Нет записей</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <button class="btn btn-success mb-3" onclick="exportToExcel()">
+    📥 Экспорт в Excel
+  </button>
+
+  <style>
+.no-wrap {
+  white-space: nowrap;
+}
+
+  </style>
+
+
+{% endblock %}
+
+
+
+  

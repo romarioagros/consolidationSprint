@@ -28,7 +28,7 @@ def reestr_list(request):
         cursor.execute('''
             SELECT 
                id, service_id, revenue_type, contractor, contract_number,
-                sign_date, subject, code, type, status
+                sign_date, subject, kbk, type, status
             FROM agrements.reestr
             
         ''')
@@ -93,7 +93,7 @@ def add_reestr(request):
                 cursor.execute('''
                     INSERT INTO agrements.reestr (
                         service_id, revenue_type, contractor, contract_number,
-                        sign_date, subject, code, type, status, created_at, creator_ip
+                        sign_date, subject, kbk, type, status, created_at, creator_ip
                     ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 ''', [
                     data.get('service_id'),
@@ -102,7 +102,7 @@ def add_reestr(request):
                     data.get('contract_number'),
                     data.get('sign_date'),
                     data.get('subject'),
-                    data.get('code'),
+                    data.get('kbk'),
                     data.get('type'),
                     data.get('status'),
                     created_at,

@@ -14,6 +14,15 @@ from .decorators import group_required
 from django.views.decorators.http import require_http_methods
 from datetime import datetime
 from decimal import Decimal
+
+from django.utils.text import get_valid_filename
+import csv
+import io
+import os
+from openpyxl import load_workbook  # pip install openpyxl
+
+
+
 # Create your views here.
 
 
@@ -918,7 +927,68 @@ def add_defNumbers(request):
         "prev_valid_to": "",
     })
 
- 
+MAX_FILE_SIZE = 2 * 1024 * 1024  # 2 MB
+ALLOWED_EXTS = {'.xlsx', '.xls', '.csv'}
+
+def _normalize_alfa_list(values):
+    """Очистка: trim, убрать пустые, дедуп, сохранить порядок."""
+    seen = set()
+    result = []
+    for v in values:
+        if v is None:
+            continue
+        s = str(v).strip()
+        if not s:
+            continue
+        if s not in seen:
+            seen.add(s)
+            result.append(s)
+    return result
+
+def _read_first_column_from_csv(uploaded_file):
+    # читаем текст в utf-8/utf-8-sig, берём первую колонку, пропускаем шапку
+    data = uploaded_file.read()
+    try:
+        text = data.decode('utf-8-sig')
+    except UnicodeDecodeError:
+        text = data.decode('cp1251', errors='ignore')
+    f = io.StringIO(text)
+    reader = csv.reader(f)
+    rows = list(reader)
+    if not rows:
+        return []
+    # пропускаем первую строку (шапку)
+    first_col = [r[0] if r else '' for r in rows[1:]]
+    return _normalize_alfa_list(first_col)
+
+def _read_first_column_from_xlsx(uploaded_file):
+    wb = load_workbook(uploaded_file, read_only=True, data_only=True)
+    ws = wb.active
+    values = []
+    first = True
+    for row in ws.iter_rows(min_row=1, values_only=True):
+        if first:
+            first = False
+            continue  # пропустить шапку
+        if not row:
+            continue
+        values.append(row[0])
+    return _normalize_alfa_list(values)
+
+def _parse_excel_file(uploaded_file):
+    # базовая валидация
+    name = get_valid_filename(uploaded_file.name or 'upload')
+    ext = os.path.splitext(name)[1].lower()
+    if ext not in ALLOWED_EXTS:
+        raise ValueError("Поддерживаются файлы: .xlsx, .xls, .csv")
+    if uploaded_file.size and uploaded_file.size > MAX_FILE_SIZE:
+        raise ValueError(f"Файл слишком большой (> {MAX_FILE_SIZE // (1024*1024)} MB)")
+
+    if ext == '.csv':
+        return _read_first_column_from_csv(uploaded_file)
+    else:
+        return _read_first_column_from_xlsx(uploaded_file)
+
 #@group_required('addAlfa', redirect_to='sms_blinoff:alfa_list', message="У вас нет прав для добавления записей.")
 def bulk_add_alfa(request):
     # 1. Загружаем список материнских компаний
@@ -926,86 +996,126 @@ def bulk_add_alfa(request):
         cursor.execute("SELECT id, name FROM descr.mother ORDER BY name;")
         mothers = [{"id": r[0], "name": r[1]} for r in cursor.fetchall()]
 
+    # значения по умолчанию для рендера
+    prev = {
+        "alfa_names": request.POST.getlist("alfa_names[]") if request.method == "POST" else [""],
+        "mother_id": request.POST.get("mother_id", "").strip() if request.method == "POST" else "",
+        "price": request.POST.get("price", "").strip() if request.method == "POST" else "",
+        "currency": request.POST.get("currency", "").strip() if request.method == "POST" else "",
+        "fee": request.POST.get("fee", "").strip() if request.method == "POST" else "",
+        "data_start": request.POST.get("data_start", "").strip() if request.method == "POST" else "",
+        "data_end": request.POST.get("data_end", "").strip() if request.method == "POST" else "",
+    }
+    import_message = ""
+    import_errors = []
+
     if request.method == "POST":
-        alfa_names = request.POST.getlist("alfa_names[]")
-        mother_id = request.POST.get("mother_id", "").strip()
-        price = request.POST.get("price", "").strip()
-        currency = request.POST.get("currency", "").strip()
-        fee = request.POST.get("fee", "").strip()
-        data_start = request.POST.get("data_start", "").strip()
-        data_end = request.POST.get("data_end", "").strip()
+        action = request.POST.get("action")  # 'import_excel' или 'save'
 
-        # Получаем IP
-        xff = request.META.get("HTTP_X_FORWARDED_FOR")
-        client_ip = xff.split(",")[0].strip() if xff else request.META.get("REMOTE_ADDR", "")
-
-        # Проверка на пустые поля
-        if not alfa_names or not any(name.strip() for name in alfa_names):
-            messages.error(request, "Введите хотя бы один Alfa-номер.")
+        # ===== Импорт из файла =====
+        if action == "import_excel":
+            file = request.FILES.get("excel_file")
+            if not file:
+                import_errors.append("Файл не выбран.")
+            else:
+                try:
+                    imported = _parse_excel_file(file)
+                    merged = _normalize_alfa_list((prev["alfa_names"] or []) + imported)
+                    prev["alfa_names"] = merged or [""]
+                    import_message = f"Импортировано: {len(imported)}. Всего в списке: {len(merged)}."
+                except Exception as e:
+                    import_errors.append(str(e))
             return render(request, "alfa_bulk_add.html", {
                 "mothers": mothers,
-                "prev_alfa_names": alfa_names,
-                "prev_mother_id": mother_id,
-                "prev_price": price,
-                "prev_currency": currency,
-                "prev_fee": fee,
-                "prev_data_start": data_start,
-                "prev_data_end": data_end,
+                "prev_alfa_names": prev["alfa_names"],
+                "prev_mother_id": prev["mother_id"],
+                "prev_price": prev["price"],
+                "prev_currency": prev["currency"],
+                "prev_fee": prev["fee"],
+                "prev_data_start": prev["data_start"],
+                "prev_data_end": prev["data_end"],
+                "import_message": import_message,
+                "import_errors": import_errors,
             })
 
-        if not mother_id:
-            messages.error(request, "Выберите материнскую компанию.")
-            return render(request, "alfa_bulk_add.html", {
-                "mothers": mothers,
-                "prev_alfa_names": alfa_names,
-                "prev_mother_id": mother_id,
-                "prev_price": price,
-                "prev_currency": currency,
-                "prev_fee": fee,
-                "prev_data_start": data_start,
-                "prev_data_end": data_end,
-            })
+        # ===== Сохранение =====
+        if action == "save":
+            alfa_names = _normalize_alfa_list(prev["alfa_names"])
+            mother_id = prev["mother_id"]
+            price = prev["price"]
+            currency = prev["currency"]
+            fee = prev["fee"]
+            data_start = prev["data_start"]
+            data_end = prev["data_end"]
 
-        with connections['pgDataforSMS'].cursor() as cursor:
-            cursor.execute("SELECT COALESCE(MAX(id), 0) FROM descr.alfa_numbers_new;")
-            last_id = cursor.fetchone()[0]
+            # Получаем IP
+            xff = request.META.get("HTTP_X_FORWARDED_FOR")
+            client_ip = xff.split(",")[0].strip() if xff else request.META.get("REMOTE_ADDR", "")
 
-            count = 0
-            for name in alfa_names:
-                name = name.strip()
-                if not name:
-                    continue
+            if not alfa_names:
+                messages.error(request, "Введите хотя бы один Alfa-номер.")
+                return render(request, "alfa_bulk_add.html", {
+                    "mothers": mothers,
+                    "prev_alfa_names": prev["alfa_names"] or [""],
+                    "prev_mother_id": mother_id,
+                    "prev_price": price,
+                    "prev_currency": currency,
+                    "prev_fee": fee,
+                    "prev_data_start": data_start,
+                    "prev_data_end": data_end,
+                })
 
-                last_id += 1
-                cursor.execute("""
-                    INSERT INTO descr.alfa_numbers_new
-                        (id, alfa_name, id_company, price, currency, fee,
-                         data_start, data_end, ips)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
-                """, [
-                    last_id,
-                    name,
-                    int(mother_id),
-                    price or None,
-                    currency or None,
-                    fee or None,
-                    data_start or None,
-                    data_end or None,
-                    client_ip,
-                ])
-                count += 1
+            if not mother_id:
+                messages.error(request, "Выберите материнскую компанию.")
+                return render(request, "alfa_bulk_add.html", {
+                    "mothers": mothers,
+                    "prev_alfa_names": prev["alfa_names"] or [""],
+                    "prev_mother_id": mother_id,
+                    "prev_price": price,
+                    "prev_currency": currency,
+                    "prev_fee": fee,
+                    "prev_data_start": data_start,
+                    "prev_data_end": data_end,
+                })
 
-        messages.success(request, f"Добавлено {count} Alfa-номеров.")
-        return redirect("sms_blinoff:alfa_list")
+            with connections['pgDataforSMS'].cursor() as cursor:
+                cursor.execute("SELECT COALESCE(MAX(id), 0) FROM descr.alfa_numbers_new;")
+                last_id = cursor.fetchone()[0]
 
-    # GET-запрос — рендерим пустую форму
+                count = 0
+                for name in alfa_names:
+                    last_id += 1
+                    cursor.execute("""
+                        INSERT INTO descr.alfa_numbers_new
+                            (id, alfa_name, id_company, price, currency, fee,
+                             data_start, data_end, ips)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
+                    """, [
+                        last_id,
+                        name,
+                        int(mother_id),
+                        price or None,
+                        currency or None,
+                        fee or None,
+                        data_start or None,
+                        data_end or None,
+                        client_ip,
+                    ])
+                    count += 1
+
+            messages.success(request, f"Добавлено {count} Alfa-номеров.")
+            return redirect("sms_blinoff:alfa_list")
+
+    # GET или нераспознанное действие — отрисуем форму
     return render(request, "alfa_bulk_add.html", {
         "mothers": mothers,
-        "prev_alfa_names": [""],
-        "prev_mother_id": "",
-        "prev_price": "",
-        "prev_currency": "",
-        "prev_fee": "",
-        "prev_data_start": "",
-        "prev_data_end": "",
+        "prev_alfa_names": prev["alfa_names"],
+        "prev_mother_id": prev["mother_id"],
+        "prev_price": prev["price"],
+        "prev_currency": prev["currency"],
+        "prev_fee": prev["fee"],
+        "prev_data_start": prev["data_start"],
+        "prev_data_end": prev["data_end"],
+        "import_message": "",
+        "import_errors": [],
     })

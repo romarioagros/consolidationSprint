@@ -34,9 +34,9 @@
             <td>{{ row.revenue_type }}</td>
             <td>{{ row.contractor }}</td>
             <td>{{ row.contract_number }}</td>
-            <td>{{ row.sign_date }}</td>
+            <td>{{ row.sign_date|date:"d.m.Y" }}</td>
             <td>{{ row.subject }}</td>
-            <td>{{ row.code }}</td>
+            <td>{{ row.kbk }}</td>
             <td>{{ row.type }}</td>
             <td>{{ row.status }}</td>
         </tr>

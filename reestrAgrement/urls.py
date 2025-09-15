@@ -17,5 +17,6 @@ urlpatterns = [
     # Все урлы приложения reestr (они тоже будут закрыты благодаря декораторам внутри)
     path('reestr/', include('reestr.urls')),
     path('sms_blinoff/',        include('sms_blinoff.urls')),
-     path('voice/', include('voice.urls')),
+    path('voice/', include('voice.urls')),
+    path('bitrix24/', include('bitrix24.urls')),
 ]

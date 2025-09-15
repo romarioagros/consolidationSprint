@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Список файлов-договоров в Битрикс24 {% endblock %}
+
+{% block content %}
+  <h2 class="mt-3 mb-4">🏷️ Список файлов-договоров в Битрикс24</h2>
+
+  <div class="mb-3">
+    <button id="export-btn" class="btn btn-success">📥 Экспорт в Excel</button>
+</div>
+
+  {% if messages %}
+    <div class="container mb-4">
+      {% for msg in messages %}
+        <div class="alert alert-{{ msg.tags }}">{{ msg }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+
+
+  <div class="table-responsive">
+    <table id="bitrix-files" class="table table-bordered table-striped table-sm datatable"   data-order-col="4" data-order-dir="desc">
+      <thead class="table-light">
+        <tr>
+          <th>ID</th>
+          <th>Имя</th>
+          <th>Путь</th>
+          <th>создано</th>
+          <th>изменено</th>
+          <th>кем создания</th>
+          <th>кем изменено</th>
+          <th>Скачать</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in files %}
+          <tr>
+            <td>{{ m.id }}</td>
+            <td>{{ m.name }}</td>
+            <td>{{ m.path }}</td>
+            <td data-order="{{ m.create_ts }}">{{ m.create_time }}</td>
+            <td data-order="{{ m.update_ts }}">{{ m.update_time }}</td>
+            <td>{{ m.created }}</td>
+            <td>{{ m.updated }}</td>
+            
+            <td>
+                {% if m.download_link %}
+                  <a href="{{ m.download_link }}" target="_blank" rel="noopener">
+                    {{ m.name }}
+                  </a>
+                {% else %}
+                  {{ m.name }}
+                {% endif %}
+              </td> 
+
+
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="8" class="text-center">Нет записей</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <button class="btn btn-success mb-3" onclick="exportToExcel()">
+    📥 Экспорт в Excel
+  </button>
+{% endblock %}
+
+
+
+  

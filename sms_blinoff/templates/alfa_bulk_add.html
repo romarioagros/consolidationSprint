@@ -3,8 +3,26 @@
 {% block content %}
 <h2>Массовое добавление Alfa-номеров</h2>
 
-<form method="post">
+<form method="post" enctype="multipart/form-data">
   {% csrf_token %}
+
+  <div class="import-box">
+    <label for="excel_file"><b>Импорт из Excel/CSV (первый столбец, без шапки):</b></label>
+    <input type="file" id="excel_file" name="excel_file" accept=".xlsx,.xls,.csv">
+    <button type="submit" name="action" value="import_excel">Импортировать</button>
+    {% if import_message %}
+      <div class="import-message">{{ import_message }}</div>
+    {% endif %}
+    {% if import_errors %}
+      <ul class="import-errors">
+        {% for err in import_errors %}
+          <li>{{ err }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  </div>
+
+  <hr>
 
   <div id="alfa-container">
     {% for name in prev_alfa_names %}
@@ -41,7 +59,7 @@
   <label>Дата окончания:</label>
   <input type="date" name="data_end" value="{{ prev_data_end }}"><br><br>
 
-  <button type="submit">💾 Сохранить</button>
+  <button type="submit" name="action" value="save">💾 Сохранить</button>
   <a href="{% url 'sms_blinoff:alfa_list' %}" class="btn btn-secondary">Отмена</a>
 </form>
 
@@ -64,14 +82,11 @@ function removeRow(btn) {
 </script>
 
 <style>
-  .alfa-row {
-    margin-bottom: 8px;
-  }
-  input[type="text"] {
-    min-width: 200px;
-  }
-  button[type="button"] {
-    margin-left: 6px;
-  }
+  .alfa-row { margin-bottom: 8px; }
+  input[type="text"] { min-width: 200px; }
+  button[type="button"] { margin-left: 6px; }
+  .import-box { margin-bottom: 12px; }
+  .import-message { margin-top: 6px; font-size: 0.95em; }
+  .import-errors { margin-top: 6px; color: #a00; }
 </style>
 {% endblock %}
